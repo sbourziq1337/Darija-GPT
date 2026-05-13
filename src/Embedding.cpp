@@ -172,7 +172,7 @@ void Embedding::apply_gradients(float learning_rate) {
 }
 
 // Serialize weights
-void Embedding::save_weights(std::ofstream& f) const {
+void Embedding::save_weights(std::ostream& f) const {
     for (int i = 0; i < vocab_size; ++i) {
         f.write(reinterpret_cast<const char*>(token_embeddings[i].data()),
                 embedding_dim * sizeof(float));

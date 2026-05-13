@@ -171,7 +171,7 @@ void Linear::apply_gradients(float learning_rate) {
     }
 }
 
-void Linear::save_weights(std::ofstream& f) const {
+void Linear::save_weights(std::ostream& f) const {
     for (int in = 0; in < input_dim; ++in) {
         f.write(reinterpret_cast<const char*>(weights[in].data()),
                 output_dim * sizeof(float));

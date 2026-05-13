@@ -111,7 +111,7 @@ void TransformerBlock::apply_gradients(float learning_rate) {
     ff.apply_gradients(learning_rate);
 }
 
-void TransformerBlock::save_weights(std::ofstream& f) const {
+void TransformerBlock::save_weights(std::ostream& f) const {
     ln1.save_weights(f);
     attn.save_weights(f);
     ln2.save_weights(f);

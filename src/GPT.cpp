@@ -4,9 +4,44 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <stdexcept>
+#include <vector>
 
+#include "Checkpoint.hpp"
 #include "Sampler.hpp"
+
+namespace {
+    void write_int(std::ostream& f, int value) {
+        f.write(reinterpret_cast<const char*>(&value), sizeof(int));
+    }
+
+    int read_int(std::ifstream& f) {
+        int value = 0;
+        f.read(reinterpret_cast<char*>(&value), sizeof(int));
+        return value;
+    }
+
+    void write_float(std::ostream& f, float value) {
+        f.write(reinterpret_cast<const char*>(&value), sizeof(float));
+    }
+
+    float read_float(std::ifstream& f) {
+        float value = 0.0f;
+        f.read(reinterpret_cast<char*>(&value), sizeof(float));
+        return value;
+    }
+
+    void write_uint32(std::ostream& f, uint32_t value) {
+        f.write(reinterpret_cast<const char*>(&value), sizeof(uint32_t));
+    }
+
+    uint32_t read_uint32(std::ifstream& f) {
+        uint32_t value = 0;
+        f.read(reinterpret_cast<char*>(&value), sizeof(uint32_t));
+        return value;
+    }
+}
 
 GPT::GPT(int vocab_size, int context_length, int embed_dim, int num_heads, int num_layers)
     : vocab_size_(vocab_size),
@@ -143,37 +178,36 @@ std::vector<int> GPT::generate(
 // Save / Load helpers
 // ---------------------------------------------------------------------------
 
-static void write_int(std::ofstream& f, int value) {
-    f.write(reinterpret_cast<const char*>(&value), sizeof(int));
-}
-
-static int read_int(std::ifstream& f) {
-    int value = 0;
-    f.read(reinterpret_cast<char*>(&value), sizeof(int));
-    return value;
-}
-
 bool GPT::save(const std::string& path) const {
+    CheckpointMetadata meta;
+    return save(path, meta);
+}
+
+bool GPT::save(const std::string& path, const CheckpointMetadata& meta) const {
     std::filesystem::path dir = std::filesystem::path(path).parent_path();
     if (!dir.empty() && !std::filesystem::exists(dir)) {
         std::filesystem::create_directories(dir);
     }
 
-    std::ofstream f(path, std::ios::binary);
-    if (!f) {
-        std::cerr << "GPT::save: cannot open " << path << std::endl;
-        return false;
-    }
+    // Build the checkpoint in memory first
+    std::ostringstream oss(std::ios::binary);
+    std::ostream& f = oss;
 
     // Header
-    const char magic[9] = "DARIJGPT";
-    f.write(magic, 8);
-    write_int(f, 1);               // version
+    f.write(CheckpointMetadata::MAGIC, 8);
+    write_int(f, CheckpointMetadata::CURRENT_VERSION);
     write_int(f, vocab_size_);
     write_int(f, context_length_);
     write_int(f, embed_dim_);
     write_int(f, num_heads_);
     write_int(f, num_layers_);
+
+    // Metadata (version 2)
+    write_int(f, meta.saved_step);
+    write_float(f, meta.saved_lr);
+    write_float(f, meta.best_loss);
+    write_uint32(f, meta.rng_seed);
+    write_uint32(f, 0);  // checksum placeholder (computed later)
 
     // Weights
     embedding_.save_weights(f);
@@ -183,10 +217,30 @@ bool GPT::save(const std::string& path) const {
     final_ln_.save_weights(f);
     lm_head_.save_weights(f);
 
-    return f.good();
+    std::string data = oss.str();
+
+    // Compute checksum over everything AFTER the checksum field
+    // Skip magic(8) + version(4) + config(20) + meta_step(4) + meta_lr(4) + meta_loss(4) + meta_seed(4) = 48
+    // Checksum field itself is at offset 48, 4 bytes
+    std::size_t checksum_offset = 8 + 4 + 20 + 4 + 4 + 4 + 4;
+    uint32_t checksum = CheckpointUtil::compute_checksum(
+        reinterpret_cast<const float*>(data.data() + checksum_offset + 4),
+        (data.size() - checksum_offset - 4) / sizeof(float)
+    );
+
+    // Write checksum into the buffer
+    *reinterpret_cast<uint32_t*>(data.data() + checksum_offset) = checksum;
+
+    // Atomic save
+    return CheckpointUtil::atomic_save(path, ".tmp", data.data(), data.size());
 }
 
 bool GPT::load(const std::string& path) {
+    CheckpointMetadata dummy;
+    return load(path, dummy);
+}
+
+bool GPT::load(const std::string& path, CheckpointMetadata& out_meta) {
     std::ifstream f(path, std::ios::binary);
     if (!f) {
         return false;
@@ -194,13 +248,13 @@ bool GPT::load(const std::string& path) {
 
     char magic[9] = {};
     f.read(magic, 8);
-    if (std::string(magic, 8) != "DARIJGPT") {
+    if (std::string(magic, 8) != CheckpointMetadata::MAGIC) {
         std::cerr << "GPT::load: invalid magic header" << std::endl;
         return false;
     }
 
     int version = read_int(f);
-    if (version != 1) {
+    if (version != 1 && version != CheckpointMetadata::CURRENT_VERSION) {
         std::cerr << "GPT::load: unsupported version " << version << std::endl;
         return false;
     }
@@ -225,6 +279,41 @@ bool GPT::load(const std::string& path) {
                   << " heads=" << num_heads_
                   << " layers=" << num_layers_ << std::endl;
         return false;
+    }
+
+    if (version == CheckpointMetadata::CURRENT_VERSION) {
+        // Read metadata
+        out_meta.version = version;
+        out_meta.saved_step = read_int(f);
+        out_meta.saved_lr = read_float(f);
+        out_meta.best_loss = read_float(f);
+        out_meta.rng_seed = read_uint32(f);
+        out_meta.checksum = read_uint32(f);
+
+        // Validate checksum
+        // Get current position
+        auto pos = f.tellg();
+        f.seekg(0, std::ios::end);
+        auto end = f.tellg();
+        std::size_t data_size = static_cast<std::size_t>(end - pos);
+        f.seekg(pos);
+
+        std::vector<float> weight_data(data_size / sizeof(float));
+        f.read(reinterpret_cast<char*>(weight_data.data()), static_cast<std::streamsize>(data_size));
+
+        uint32_t computed = CheckpointUtil::compute_checksum(weight_data.data(), weight_data.size());
+        if (computed != out_meta.checksum) {
+            std::cerr << "GPT::load: checksum mismatch! File may be corrupted." << std::endl;
+            std::cerr << "  Expected: " << out_meta.checksum << std::endl;
+            std::cerr << "  Computed: " << computed << std::endl;
+            return false;
+        }
+
+        // Rewind to load weights
+        f.seekg(pos);
+    } else {
+        // Version 1: no metadata
+        out_meta = CheckpointMetadata();
     }
 
     embedding_.load_weights(f);

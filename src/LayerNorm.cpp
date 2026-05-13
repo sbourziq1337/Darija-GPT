@@ -163,7 +163,7 @@ void LayerNorm::apply_gradients(float learning_rate) {
     }
 }
 
-void LayerNorm::save_weights(std::ofstream& f) const {
+void LayerNorm::save_weights(std::ostream& f) const {
     f.write(reinterpret_cast<const char*>(gamma.data()), embed_dim * sizeof(float));
     f.write(reinterpret_cast<const char*>(beta.data()), embed_dim * sizeof(float));
 }

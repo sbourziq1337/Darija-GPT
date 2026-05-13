@@ -6,11 +6,36 @@
 #include <vector>
 
 #include "ByteTokenizer.hpp"
+#include "Checkpoint.hpp"
 #include "Dataset.hpp"
 #include "GPT.hpp"
 #include "Trainer.hpp"
 
-int main() {
+static void print_usage(const char* prog) {
+    std::cout << "Usage: " << prog << " [options]\n"
+              << "Options:\n"
+              << "  --checkpoint-dir <path>  Directory for checkpoints (default: models/)\n"
+              << "  --resume                 Auto-resume from latest checkpoint\n"
+              << "  --help                   Show this help\n";
+}
+
+int main(int argc, char* argv[]) {
+    std::string checkpoint_dir = "models";
+    bool auto_resume = false;
+
+    // Parse CLI arguments
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--checkpoint-dir" && i + 1 < argc) {
+            checkpoint_dir = argv[++i];
+        } else if (arg == "--resume") {
+            auto_resume = true;
+        } else if (arg == "--help") {
+            print_usage(argv[0]);
+            return 0;
+        }
+    }
+
     std::cout << "==========================" << std::endl;
     std::cout << "Darija GPT - Full Model" << std::endl;
     std::cout << "==========================" << std::endl;
@@ -27,6 +52,7 @@ int main() {
     const int decay_every = 100;
     const int training_steps = 10000;
     const int print_every = 250;
+    const int checkpoint_every = 500;
 
     std::cout << "\n--- Model Config ---" << std::endl;
     std::cout << "Vocab size:      " << vocab_size << std::endl;
@@ -37,6 +63,8 @@ int main() {
     std::cout << "Batch size:      " << batch_size << std::endl;
     std::cout << "Learning rate:   " << learning_rate << std::endl;
     std::cout << "Training steps:  " << training_steps << std::endl;
+    std::cout << "Checkpoint dir:  " << checkpoint_dir << std::endl;
+    std::cout << "Checkpoint every: " << checkpoint_every << " steps" << std::endl;
 
     // Load data
     std::cout << "\n[1/7] Loading data..." << std::endl;
@@ -65,13 +93,34 @@ int main() {
     GPT model(vocab_size, context_length, embed_dim, num_heads, num_layers);
     std::cout << "Model created." << std::endl;
 
-    // Check for saved model
-    std::string model_path = "models/darija_gpt.bin";
-    if (std::filesystem::exists(model_path)) {
-        std::cout << "\nFound saved model at " << model_path << std::endl;
+    // Checkpoint resume logic
+    int resume_step = 0;
+    float resume_lr = 0.0f;
+    std::string latest_path = checkpoint_dir + "/darija_gpt_latest.bin";
+    std::string model_path = checkpoint_dir + "/darija_gpt.bin";
+
+    // Try checkpoint first, then old model path
+    std::string load_path = "";
+    if (auto_resume && std::filesystem::exists(latest_path)) {
+        load_path = latest_path;
+    } else if (std::filesystem::exists(model_path)) {
+        load_path = model_path;
+    }
+
+    if (!load_path.empty()) {
+        std::cout << "\nFound saved model at " << load_path << std::endl;
         std::cout << "Loading weights..." << std::endl;
-        if (model.load(model_path)) {
+
+        CheckpointMetadata meta;
+        if (model.load(load_path, meta)) {
             std::cout << "Model loaded successfully!" << std::endl;
+            if (meta.saved_step > 0) {
+                std::cout << "  -> Resuming from step " << meta.saved_step << std::endl;
+                std::cout << "  -> Saved LR: " << meta.saved_lr << std::endl;
+                std::cout << "  -> Best loss: " << meta.best_loss << std::endl;
+                resume_step = meta.saved_step;
+                resume_lr = meta.saved_lr;
+            }
         } else {
             std::cout << "Failed to load model, training from scratch." << std::endl;
         }
@@ -80,7 +129,8 @@ int main() {
     // Train
     std::cout << "\n[5/7] Training..." << std::endl;
     Trainer trainer(dataset, model, learning_rate, lr_decay, decay_every, print_every);
-    trainer.train(training_steps);
+    trainer.set_checkpoint_dir(checkpoint_dir, checkpoint_every);
+    trainer.train(training_steps, resume_step, resume_lr);
 
     // Evaluate
     std::cout << "\n[6/7] Evaluating..." << std::endl;
@@ -90,9 +140,13 @@ int main() {
     std::cout << "Val loss:   " << val_loss << std::endl;
     std::cout << "Random baseline: log(" << vocab_size << ") = " << std::log(vocab_size) << std::endl;
 
-    // Save model
+    // Save final model
     std::cout << "\n[7/7] Saving model to " << model_path << "..." << std::endl;
-    if (model.save(model_path)) {
+    CheckpointMetadata final_meta;
+    final_meta.saved_step = training_steps;
+    final_meta.saved_lr = learning_rate;
+    final_meta.best_loss = trainer.best_loss();
+    if (model.save(model_path, final_meta)) {
         std::cout << "Model saved!" << std::endl;
     } else {
         std::cerr << "Failed to save model." << std::endl;

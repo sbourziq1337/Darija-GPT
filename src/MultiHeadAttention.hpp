@@ -60,7 +60,7 @@ public:
     void apply_gradients(float learning_rate);
 
     // Serialize weights to binary stream
-    void save_weights(std::ofstream& f) const;
+    void save_weights(std::ostream& f) const;
 
     // Load weights from binary stream
     void load_weights(std::ifstream& f);

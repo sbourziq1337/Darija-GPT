@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include "ByteTokenizer.hpp"
+#include "Checkpoint.hpp"
 #include "Dataset.hpp"
 #include "Embedding.hpp"
 #include "LayerNorm.hpp"
@@ -57,11 +58,17 @@ public:
         float temperature
     );
 
-    // Save weights to binary file
+    // Save weights to binary file (version 1 compatible)
     bool save(const std::string& path) const;
+
+    // Save weights with checkpoint metadata (version 2)
+    bool save(const std::string& path, const CheckpointMetadata& meta) const;
 
     // Load weights from binary file
     bool load(const std::string& path);
+
+    // Load weights and extract checkpoint metadata (version 2)
+    bool load(const std::string& path, CheckpointMetadata& out_meta);
 
     // Getters
     int vocab_size() const { return vocab_size_; }

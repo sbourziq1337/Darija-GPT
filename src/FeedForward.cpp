@@ -99,7 +99,7 @@ void FeedForward::apply_gradients(float learning_rate) {
     linear_down.apply_gradients(learning_rate);
 }
 
-void FeedForward::save_weights(std::ofstream& f) const {
+void FeedForward::save_weights(std::ostream& f) const {
     linear_up.save_weights(f);
     linear_down.save_weights(f);
 }

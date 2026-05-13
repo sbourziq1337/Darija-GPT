@@ -1,5 +1,6 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -O3 -Wall -Wextra -Wpedantic
+CXXFLAGS := -std=c++17 -O3 -Wall -Wextra -Wpedantic -fopenmp
+LDFLAGS  := -fopenmp
 CPPFLAGS := -Isrc
 
 SRC_DIR  := src
@@ -15,11 +16,11 @@ all: $(TARGET_LLM) $(TARGET_CHAT)
 
 # Main training/generation program
 $(TARGET_LLM): $(COMMON_OBJS) $(SRC_DIR)/main.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 # Interactive chat program
 $(TARGET_CHAT): $(COMMON_OBJS) $(SRC_DIR)/chat.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@

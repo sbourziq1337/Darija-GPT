@@ -199,7 +199,8 @@ std::vector<std::vector<std::vector<float>>> MultiHeadAttention::forward(
             }
         }
 
-        // Process each attention head
+        // Process each attention head (parallelized with OpenMP)
+        #pragma omp parallel for
         for (int h = 0; h < num_heads; ++h) {
             int offset = h * head_dim;
 
@@ -420,7 +421,7 @@ void MultiHeadAttention::apply_gradients(float learning_rate) {
     }
 }
 
-void MultiHeadAttention::save_weights(std::ofstream& f) const {
+void MultiHeadAttention::save_weights(std::ostream& f) const {
     for (int i = 0; i < embed_dim; ++i) {
         f.write(reinterpret_cast<const char*>(Wq[i].data()), embed_dim * sizeof(float));
         f.write(reinterpret_cast<const char*>(Wk[i].data()), embed_dim * sizeof(float));
