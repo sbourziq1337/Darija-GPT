@@ -15,7 +15,8 @@ private:
 
 public:
     // Initializes weights with small random values and bias to zero
-    Linear(int input_dim, int output_dim);
+    // If init_std > 0, uses that standard deviation; otherwise uses Xavier init
+    Linear(int input_dim, int output_dim, float init_std = 0.0f);
 
     // Computes matrix multiplication: output = input * weights + bias
     std::vector<std::vector<std::vector<float>>> forward(

@@ -16,7 +16,7 @@ GPT::GPT(int vocab_size, int context_length, int embed_dim, int num_heads, int n
       num_layers_(num_layers),
       embedding_(vocab_size, embed_dim, context_length),
       final_ln_(embed_dim),
-      lm_head_(embed_dim, vocab_size) {
+      lm_head_(embed_dim, vocab_size, 0.02f) {
 
     if (num_layers <= 0) {
         throw std::runtime_error("GPT: num_layers must be greater than zero");

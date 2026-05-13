@@ -15,13 +15,13 @@ int main() {
     std::cout << "Darija GPT - Full Model" << std::endl;
     std::cout << "==========================" << std::endl;
 
-    // Model config
+    // Model config (CPU-friendly: balances speed and quality)
     const int vocab_size = 257;
     const int context_length = 64;
-    const int embed_dim = 256;
-    const int num_heads = 8;
-    const int num_layers = 6;
-    const int batch_size = 16;
+    const int embed_dim = 128;
+    const int num_heads = 4;
+    const int num_layers = 4;
+    const int batch_size = 8;
     const float learning_rate = 0.0003f;
     const float lr_decay = 0.99f;
     const int decay_every = 100;

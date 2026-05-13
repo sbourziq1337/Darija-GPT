@@ -1,5 +1,6 @@
 #include "Trainer.hpp"
 
+#include <chrono>
 #include <iostream>
 
 #include "Loss.hpp"
@@ -15,8 +16,11 @@ Trainer::Trainer(Dataset& dataset, GPT& model, float learning_rate,
 
 void Trainer::train(int steps) {
     float current_lr = learning_rate;
+    auto start_time = std::chrono::high_resolution_clock::now();
 
     for (int step = 0; step < steps; ++step) {
+        auto step_start = std::chrono::high_resolution_clock::now();
+
         Batch batch = dataset.get_batch(Split::Train);
 
         model.zero_grad();
@@ -30,9 +34,17 @@ void Trainer::train(int steps) {
         model.apply_gradients(current_lr);
 
         if ((step + 1) % print_every == 0 || step == 0) {
+            auto now = std::chrono::high_resolution_clock::now();
+            float elapsed = std::chrono::duration<float>(now - start_time).count();
+            float step_time = std::chrono::duration<float>(now - step_start).count();
+            float est_remaining = (steps - (step + 1)) * (elapsed / (step + 1));
+
             std::cout << "Step " << (step + 1) << "/" << steps
                       << " | Loss: " << loss
-                      << " | LR: " << current_lr << std::endl;
+                      << " | LR: " << current_lr
+                      << " | " << step_time << "s/step"
+                      << " | ~" << static_cast<int>(est_remaining / 60.0f) << "min left"
+                      << std::endl;
         }
 
         // Decay learning rate

@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <utility>
 
-// Creates weight matrix with random values (-0.01 to 0.01) and zero bias
-Linear::Linear(int input_dim, int output_dim)
+// Creates weight matrix with random values and zero bias
+Linear::Linear(int input_dim, int output_dim, float init_std)
     : input_dim(input_dim), output_dim(output_dim) {
     if (input_dim <= 0) {
         throw std::runtime_error("input_dim must be greater than zero");
@@ -17,7 +17,12 @@ Linear::Linear(int input_dim, int output_dim)
     }
 
     std::mt19937 rng(std::random_device{}());
-    float init_range = std::sqrt(6.0f / (input_dim + output_dim));
+    float init_range;
+    if (init_std > 0.0f) {
+        init_range = init_std;
+    } else {
+        init_range = std::sqrt(6.0f / (input_dim + output_dim));
+    }
     std::uniform_real_distribution<float> dist(-init_range, init_range);
 
     weights.resize(input_dim);

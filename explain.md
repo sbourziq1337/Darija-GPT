@@ -2085,6 +2085,45 @@ Bot (temp=1.5):  salam wa7ed jouj tlata
 Lower temperature = safer, more predictable responses.
 Higher temperature = more creative, sometimes nonsensical responses.
 
---
+---
+
+## Quick Glossary
+
+| Term | Meaning |
+|---|---|---|
+| **Token** | A number representing a piece of text (byte or word) |
+| **Embedding** | A vector (list of numbers) representing a token |
+| **Logit** | Raw prediction score before softmax |
+| **Softmax** | Converts scores to probabilities that sum to 1 |
+| **Loss** | Number measuring how wrong the model is (lower = better) |
+| **Gradient** | Direction and magnitude to change a weight to reduce loss |
+| **Backpropagation** | Algorithm to compute gradients backward through the network |
+| **Optimizer** | Algorithm to update weights using gradients (SGD, Adam, etc.) |
+| **Batch** | A group of training examples processed together |
+| **Epoch** | One pass through the entire dataset |
+| **Learning Rate** | Step size for weight updates (0.01 in our code) |
+| **Forward Pass** | Computing predictions from input |
+| **Backward Pass** | Computing gradients from loss |
+| **Temperature** | Controls randomness in text generation (0 = greedy, higher = more random) |
+| **Attention** | Mechanism allowing tokens to look at each other |
+| **Query (Q)** | What a token is looking for |
+| **Key (K)** | What a token contains |
+| **Value (V)** | Information a token provides |
+| **Causal Mask** | Prevents looking at future tokens during generation |
+| **Head** | One independent attention computation within multi-head attention |
+| **Head Dimension** | Size of each head's embedding slice (embed_dim / num_heads) |
+| **Feed-Forward Network** | Two linear layers with activation that processes each token independently |
+| **GELU** | Smooth activation function: 0.5 * x * (1 + erf(x / sqrt(2))) |
+| **LayerNorm** | Normalizes values across embedding dimension per token |
+| **Residual Connection** | Skip connection that adds input to output: output = input + layer(input) |
+| **TransformerBlock** | Complete unit with Attention + FeedForward + LayerNorm + Residuals |
+| **Pre-Norm** | Architecture that applies LayerNorm before each sublayer |
+| **GPT** | Generative Pre-trained Transformer - the full language model |
+| **Generate** | Produce new text by repeatedly predicting the next token |
+| **Save/Load** | Store and retrieve trained model weights from disk |
+| **Chat Mode** | Interactive terminal program to talk with the model |
+| **Overfitting** | When model memorizes training data but fails on new data |
+
+---
 
 *Document updated for Tiny Darija GPT project. Explains Phases 1-17 with concrete examples.*
