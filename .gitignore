@@ -1,0 +1,21 @@
+# Build artifacts
+*.o
+llm
+chat
+
+# Model weights (large binary files)
+models/*.bin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (optional — uncomment if you don't want to commit large text files)
+# data/*.txt

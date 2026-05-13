@@ -18,13 +18,13 @@ int main() {
     // Model config
     const int vocab_size = 257;
     const int context_length = 64;
-    const int embed_dim = 128;
-    const int num_heads = 4;
-    const int num_layers = 2;
-    const int batch_size = 8;
-    const float learning_rate = 0.01f;
-    const float lr_decay = 0.995f;
-    const int decay_every = 200;
+    const int embed_dim = 256;
+    const int num_heads = 8;
+    const int num_layers = 6;
+    const int batch_size = 16;
+    const float learning_rate = 0.0003f;
+    const float lr_decay = 0.99f;
+    const int decay_every = 100;
     const int training_steps = 10000;
     const int print_every = 250;
 

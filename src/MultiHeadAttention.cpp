@@ -161,10 +161,10 @@ std::vector<std::vector<std::vector<float>>> MultiHeadAttention::forward(
         cache_V[b].resize(seq_len);
         cache_concat[b].resize(seq_len);
         for (std::size_t i = 0; i < seq_len; ++i) {
-            cache_Q[b][i].resize(embed_dim, 0.0f);
-            cache_K[b][i].resize(embed_dim, 0.0f);
-            cache_V[b][i].resize(embed_dim, 0.0f);
-            cache_concat[b][i].resize(embed_dim, 0.0f);
+            cache_Q[b][i].assign(embed_dim, 0.0f);
+            cache_K[b][i].assign(embed_dim, 0.0f);
+            cache_V[b][i].assign(embed_dim, 0.0f);
+            cache_concat[b][i].assign(embed_dim, 0.0f);
         }
 
         // Compute Q = X @ Wq, K = X @ Wk, V = X @ Wv
