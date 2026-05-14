@@ -120,6 +120,12 @@ Default hyperparameters (easily tweakable in `src/main.cpp`):
 - Good model: `< 4.0`
 - Better model: `< 3.0`
 
+### Training Results
+
+Training on Google Colab (T4 GPU) — loss dropped from **5.57** to **3.35** over 5,750 steps:
+
+![Training Progress](assets/training_progress.png)
+
 ---
 
 ## Project Structure
